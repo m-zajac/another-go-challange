@@ -24,10 +24,8 @@ type ContentItem struct {
 // Provider represent the 3rd party from which we are getting content
 type Provider string
 
+// Sample Providers, put here as an example
 var (
-
-	// Sample Providers, put here as an example
-
 	Provider1 = Provider("1")
 	Provider2 = Provider("2")
 	Provider3 = Provider("3")
@@ -41,7 +39,7 @@ type SampleContentProvider struct {
 // GetContent returns content items given a user IP, and the number of content items desired.
 func (cp SampleContentProvider) GetContent(userIP string, count int) ([]*ContentItem, error) {
 	resp := make([]*ContentItem, count)
-	for i, _ := range resp {
+	for i := range resp {
 		resp[i] = &ContentItem{
 			ID:     strconv.Itoa(rand.Int()),
 			Title:  "title",

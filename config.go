@@ -1,7 +1,5 @@
 package main
 
-type ContentMix []ContentConfig
-
 type ContentConfig struct {
 	Type     Provider
 	Fallback *Provider

@@ -7,29 +7,26 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"time"
 )
 
 var (
 	addr = flag.String("addr", "127.0.0.1:8080", "the TCP address for the server to listen on, in the form 'host:port'")
-
-	// app gets initialised with configuration.
-	// as an example we've added 3 providers and a default configuration
-	app = App{
-		ContentClients: map[Provider]Client{
-			Provider1: SampleContentProvider{Source: Provider1},
-			Provider2: SampleContentProvider{Source: Provider2},
-			Provider3: SampleContentProvider{Source: Provider3},
-		},
-		Config: DefaultConfig,
-	}
 )
 
 func main() {
-	log.Printf("initalising server on %s", *addr)
+	flag.Parse()
 
-	srv := http.Server{
+	service, err := NewDefaultService()
+	if err != nil {
+		log.Fatalf("failed to create service: %v", err)
+	}
+	handler := &Handler{
+		service: service,
+	}
+	httpServer := http.Server{
 		Addr:    *addr,
-		Handler: app,
+		Handler: handler,
 	}
 
 	idleConnsClosed := make(chan struct{})
@@ -38,18 +35,21 @@ func main() {
 		signal.Notify(sigint, os.Interrupt)
 		<-sigint
 
-		// We received an interrupt signal, shut down.
-		if err := srv.Shutdown(context.Background()); err != nil {
-			// Error from closing listeners, or context timeout:
-			log.Printf("HTTP server Shutdown: %v", err)
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+
+		if err := httpServer.Shutdown(ctx); err != nil {
+			log.Printf("HTTP server shutdown: %v", err)
 		}
 		close(idleConnsClosed)
 	}()
 
-	if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+	log.Printf("starting server on %s", *addr)
+	if err := httpServer.ListenAndServe(); err != http.ErrServerClosed {
 		// Error starting or closing listener:
 		log.Fatalf("HTTP server ListenAndServe: %v", err)
 	}
 
 	<-idleConnsClosed
+	log.Print("server closed")
 }

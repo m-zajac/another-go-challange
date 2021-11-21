@@ -1,3 +1,3 @@
-module github.com/sliide/go-test
+module github.com/m-zajac/another-go-challange
 
-go 1.14
+go 1.17

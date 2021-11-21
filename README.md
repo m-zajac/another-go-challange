@@ -1,81 +1,49 @@
-# Golang Coding challenge
+# Go coding challenge
 
-The dev team at [Sliide](https://sliide.com/) created this coding challenge to help assess your coding and problem solving skills
-Along with this file, you should find an archive with the code od the project to complete.
+An HTTP server that returns content from a list of providers based on the configuration.
 
-# The Project
+Original requirements were redacted :)
 
-This is a simple http service that simulates a news API.
+## My take on the challenge
 
-### Content
-- The content itself is fetched from multiple providers (those could be 3rd party APIs, internal services, or database connections).
+This task is simple to implement in a basic form but a bit tricky if we want to make calls to providers efficiently (using minimal requests per provider, fetching minimal amount of data, doing it all in parallel).
 
-- Content providers are represented by the `Provider` type. And the API has a mapping between providers and `Clients` that are used to fetch content.
+While implementing the code, my goals were:
+- Guarantee:
+  - at most 1 request per provider when handling a request, when there are no provider client errors,
+  - at most 2 requests per provider when handling a request in the worst case (some provider failures)
+- Call the providers concurrently to minimize response time,
+- Ensure there is a timeout defined for processing incoming requests. Return status 500 when timeout is exceeded,
+- Write readable code,
+- Write solid tests.
+- Keep everything as simple as possible while not bending good practices (e.g., single responsibility)
 
-### Content configuration
-- The API has configuration, which represents the repeating sequence of providers to use. if the sequence is [Provider1, Provider2, Provider3] and the user requests 5 articles, the response should contain items from [Provider1, Provider2, Provider3, Provider1, Provider2] in that order.
+## Assumptions
 
-- In addition, if a provider fails to deliver content, the configuration might contain a fallback to use instead.
+- I didn't implement any form of caching.
+- I didn't change the default configuration nor implement reading configuration from environment/files.
+- I used the simplest logging with the standard `log` package and didn't differentiate between info and error logs.
 
-- In the case both the main provider and the fallback fail (or if the main provider fails and there is no fallback), the API should respond with all the items before that point.
-So, for example, if the configuration calls for [1,1,2,3] and 2 fails, the response should only contain [1,1]
+I think these things are relevant, but I assumed they are out of the scope for this task. If needed, I can implement them later.
 
-# The Interface
+## Other notes
 
-The API responds to GET requests, with 2 URL parameters:
-- `count` represents the number of items desired
-- `offset` represents the number of items previously requested. The configuration should be offset by this number.
+- I modified tests to use `httptest.NewServer`.
+- I think using testify for testing would reduce the amount of test code. But due to the instructions, I didn't use it.
+- The flag `addr` was not working correctly; I fixed that.
+- I didn't use pre-existing `App` struct.
+    - I wanted to separate the HTTP code from the app code, so I created a `Handler` and a `Service` types instead.
+- I think adding a request identifier to the logs would be useful, but I assumed it is out of scope for this task.
+- Example worst case scenario that leads to making two requests to one provider: 
+  - config: [`providerA` (fallback: none), `providerB` (fallback: `providerA`)]
+  - provider A returns ok, provider B fails. In this case 2 requests to provider A will be made.
 
-The expected response is a list of content items, each one being a JSON representation of the `ContentItem` struct, found in `content.go`
+## Running the code and making a request
 
-Example request/response:
-```
-Request:
-http '127.0.0.1:8080/?count=3&offset=10'
+Run the code:
 
-Response:
-HTTP/1.1 200 OK
-Content-Length: 385
-Content-Type: application/json
-Date: Thu, 24 Sep 2020 10:47:11 GMT
+    go run .
 
-[
-    {
-        "expiry": "2020-09-24T11:47:11.204318471+01:00",
-        "id": "5577006791947779410",
-        "link": "",
-        "source": "1",
-        "summary": "",
-        "title": "title"
-    },
-    {
-        "expiry": "2020-09-24T11:47:11.204324536+01:00",
-        "id": "8674665223082153551",
-        "link": "",
-        "source": "1",
-        "summary": "",
-        "title": "title"
-    },
-    {
-        "expiry": "2020-09-24T11:47:11.204326896+01:00",
-        "id": "6129484611666145821",
-        "link": "",
-        "source": "2",
-        "summary": "",
-        "title": "title"
-    }
-]
+Make a request:
 
-```
-
-# Instructions
-
-1. Complete the `ServeHTTP` method in server.go in accordance with the specifications above.
-2. Run existing tests, and make sure they all pass
-3. Add a few tests to capture missing edge-cases. For example, test that the fallbacks are respected.
-
-Hints:
-- You can run the server simply with `go run .` in the projects directory.
-- Tests are run with `go test` in the current directory.
-- Try to keep to the standard library as much as possible
-- Latency is crucial for this application, so fetching the items sequentially one at a time might not be good enough
+    http '127.0.0.1:8080/?count=3&offset=10'
