@@ -1,4 +1,4 @@
-# Go coding challenge [![Go Report Card](https://goreportcard.com/badge/github.com/m-zajac/another-go-challange)](https://goreportcard.com/report/github.com/m-zajac/another-go-challange) [![Coverage](https://img.shields.io/badge/coverage-gocover.io-blue)](https://gocover.io/github.com/m-zajac/another-go-challange)
+# Go coding challenge ![Build](https://github.com/m-zajac/another-go-challange/workflows/Build/badge.svg)  [![Go Report Card](https://goreportcard.com/badge/github.com/m-zajac/another-go-challange)](https://goreportcard.com/report/github.com/m-zajac/another-go-challange) [![Coverage](https://img.shields.io/badge/coverage-gocover.io-blue)](https://gocover.io/github.com/m-zajac/another-go-challange)
 
 An HTTP server that returns content from a list of providers based on the configuration.
 
