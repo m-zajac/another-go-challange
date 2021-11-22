@@ -1,5 +1,6 @@
 package main
 
+// ContentConfig defines a provider and a fallback provider for a response content item.
 type ContentConfig struct {
 	Type     Provider
 	Fallback *Provider
@@ -23,6 +24,7 @@ var (
 		Fallback: nil,
 	}
 
+	// DefaultConfig is the default configuration for preparing response content items.
 	DefaultConfig = []ContentConfig{
 		config1, config1, config2, config3, config4, config1, config1, config2,
 	}
