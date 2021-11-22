@@ -12,8 +12,10 @@ type mockContentProvider struct {
 	source        Provider
 	shouldFail    bool
 	responseDelay time.Duration
-	calls         int
-	m             sync.Mutex
+	maxResults    int
+
+	calls int
+	m     sync.Mutex
 }
 
 // GetContent returns content items given a user IP, and the number of content items desired.
@@ -31,6 +33,9 @@ func (cp *mockContentProvider) GetContent(userIP string, count int) ([]*ContentI
 		return nil, fmt.Errorf("test error")
 	}
 
+	if cp.maxResults > 0 && count > cp.maxResults {
+		count = cp.maxResults
+	}
 	resp := make([]*ContentItem, count)
 	for i := range resp {
 		resp[i] = &ContentItem{

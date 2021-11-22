@@ -372,6 +372,66 @@ func TestProviderErrors(t *testing.T) {
 	}
 }
 
+func TestProviderReturnsLessData(t *testing.T) {
+	configs := []ContentConfig{
+		{Type: Provider1},
+	}
+
+	for name, tc := range map[string]struct {
+		count     int
+		offset    int
+		wantcount int
+	}{
+		"1 item": {
+			count:     1,
+			wantcount: 1,
+		},
+		"5 items": {
+			count:     5,
+			wantcount: 5,
+		},
+		"6 items": {
+			count:     6,
+			wantcount: 5,
+		},
+		"1 item, offset 5": {
+			count:     1,
+			offset:    5,
+			wantcount: 0,
+		},
+		"3 items, offset 7": {
+			count:     3,
+			offset:    7,
+			wantcount: 0,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			clients := map[Provider]Client{
+				Provider1: &mockContentProvider{source: Provider1, maxResults: 5}, // Will return maximum 5 items.
+			}
+
+			service, err := NewService(configs, clients, defaultTimeout)
+			if err != nil {
+				t.Fatalf("creating a service: %v", err)
+			}
+
+			req, _ := http.NewRequest(
+				http.MethodGet,
+				fmt.Sprintf("/?count=%d&offset=%d", tc.count, tc.offset),
+				nil,
+			)
+			status, content := runRequest(t, service, req)
+
+			if status != http.StatusOK {
+				t.Fatalf("got response status %d", status)
+			}
+			if len(content) != tc.wantcount {
+				t.Fatalf("got %d items back, want %d", len(content), tc.wantcount)
+			}
+		})
+	}
+}
+
 func TestResponseTimeout(t *testing.T) {
 	clients := map[Provider]Client{
 		Provider1: &mockContentProvider{source: Provider1, responseDelay: 1 * time.Second},

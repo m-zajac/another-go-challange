@@ -204,7 +204,9 @@ func (s *Service) getPromiseForProvider(ctx context.Context, p Provider, userIP 
 
 		// We want to be sure that we don't have more items than the channel buffer size.
 		// Otherwise this goroutine won't be able to finish.
-		items = items[:count]
+		if len(items) > cap(out) {
+			items = items[:cap(out)]
+		}
 
 		for _, item := range items {
 			out <- &configResponse{item: item}
