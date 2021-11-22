@@ -112,7 +112,17 @@ func (s *Service) getConfigResponses(ctx context.Context, userIP string, count i
 		}
 	}
 
-	// Second pass: for each error in the responses try to use a fallback provider.
+	// Second pass: check responses and use fallback if there were any errors.
+	err := s.applyConfigFallbacks(ctx, requestConfigs, responses, userIP, count)
+	if err != nil {
+		return nil, err
+	}
+
+	return responses, nil
+}
+
+// applyConfigFallbacks updates `responses` slice in case there are errors and it is possible to apply a fallback.
+func (s *Service) applyConfigFallbacks(ctx context.Context, requestConfigs []ContentConfig, responses []*configResponse, userIP string, count int) error {
 	fallbackProviderCounts := make(map[Provider]int)
 	for i, cfg := range requestConfigs {
 		if responses[i].err == nil {
@@ -124,36 +134,39 @@ func (s *Service) getConfigResponses(ctx context.Context, userIP string, count i
 		}
 		fallbackProviderCounts[*cfg.Fallback]++
 	}
-	if len(fallbackProviderCounts) != 0 {
-		// Collect response promises for fallbacks.
-		responsePromises = make(map[Provider]<-chan *configResponse)
-		for provider, count := range fallbackProviderCounts {
-			responsePromises[provider] = s.getPromiseForProvider(ctx, provider, userIP, count)
-		}
+	if len(fallbackProviderCounts) == 0 {
+		// No errors or no fallbacks to apply - nothing to do.
+		return nil
+	}
 
-		// Fill the requestConfigs with fallback responses.
-		for i, cfg := range requestConfigs {
-			if responses[i].err == nil {
+	// Collect response promises for fallbacks.
+	responsePromises := make(map[Provider]<-chan *configResponse)
+	for provider, count := range fallbackProviderCounts {
+		responsePromises[provider] = s.getPromiseForProvider(ctx, provider, userIP, count)
+	}
+
+	// Fill the requestConfigs with fallback responses.
+	for i, cfg := range requestConfigs {
+		if responses[i].err == nil {
+			continue
+		}
+		if cfg.Fallback == nil {
+			break
+		}
+		provider := *cfg.Fallback
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case v, ok := <-responsePromises[provider]:
+			if !ok {
+				responses[i] = &configResponse{err: errors.New("not enough items")}
 				continue
 			}
-			if cfg.Fallback == nil {
-				break
-			}
-			provider := *cfg.Fallback
-			select {
-			case <-ctx.Done():
-				return nil, ctx.Err()
-			case v, ok := <-responsePromises[provider]:
-				if !ok {
-					responses[i] = &configResponse{err: errors.New("not enough items")}
-					continue
-				}
-				responses[i] = v
-			}
+			responses[i] = v
 		}
 	}
 
-	return responses, nil
+	return nil
 }
 
 // prepareConfigsForRequest returns a list of configs that configure each item that is used for generating response.

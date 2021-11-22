@@ -17,13 +17,13 @@ type Handler struct {
 
 // ServeHTTP is the main handler.
 // It knows how to handle "GET /" requests, and returns 404 for the rest.
-func (s *Handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodGet || req.URL.Path != "/" {
 		http.Error(w, "Not found", http.StatusNotFound)
 		return
 	}
 
-	s.GetContent(w, req)
+	h.GetContent(w, req)
 }
 
 // GetContent returns a list of content items for the `count` and `offset` query parameters.

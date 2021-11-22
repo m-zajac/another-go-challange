@@ -39,7 +39,7 @@ func (cp *mockContentProvider) GetContent(userIP string, count int) ([]*ContentI
 			Source: string(cp.source),
 			Expiry: time.Now(),
 		}
-
 	}
+
 	return resp, nil
 }

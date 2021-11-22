@@ -14,6 +14,8 @@ var (
 	addr = flag.String("addr", "127.0.0.1:8080", "the TCP address for the server to listen on, in the form 'host:port'")
 )
 
+const shutdownTimeout = 15 * time.Second
+
 func main() {
 	flag.Parse()
 
@@ -35,7 +37,7 @@ func main() {
 		signal.Notify(sigint, os.Interrupt)
 		<-sigint
 
-		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 		defer cancel()
 
 		if err := httpServer.Shutdown(ctx); err != nil {

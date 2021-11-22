@@ -46,7 +46,6 @@ func (cp SampleContentProvider) GetContent(userIP string, count int) ([]*Content
 			Source: string(cp.Source),
 			Expiry: time.Now(),
 		}
-
 	}
 	return resp, nil
 }
